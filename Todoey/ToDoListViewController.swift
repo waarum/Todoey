@@ -12,12 +12,18 @@ class ToDoListViewController: UITableViewController {
 
     var itemArray = ["Find Mike", "Buy Eggos", "Destory Demogorgon"]
     
+    let defaults = UserDefaults.standard
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        if let items = UserDefaults.standard.array(forKey: "ToDoItemArray") as? [String] {
+            itemArray = items
+        }
+        
     }
 
-    //MARK: - Tableview Datasource Methods
+    //MARK:- Tableview Datasource Methods
    
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
    
@@ -34,7 +40,7 @@ class ToDoListViewController: UITableViewController {
         return cell
     }
     
-    //MARK - TableView Delegate Methods
+    //MARK:- TableView Delegate Methods
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 //        print(itemArray[indexPath.row])
@@ -48,24 +54,25 @@ class ToDoListViewController: UITableViewController {
         tableView.deselectRow(at: indexPath, animated: true)
     }
     
-    //MARK - Add New Items
+    //MARK:- Add New Items
     
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         
-        let textField = UITextField()
+        var textField = UITextField()
         
         let alert = UIAlertController(title: "Add New ToDoy Items", message: nil, preferredStyle: .alert)
         
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
             // What will happen once the user taps the Add Item button on our UIAlert
             self.itemArray.append(textField.text!)
+            self.defaults.set(self.itemArray, forKey: "ToDoItemArray")
             self.tableView.reloadData()
         }
         
         alert.addTextField { (alertTextField) in
             alertTextField.text = "Create new item"
             // 次の行は参照渡しをしているのでalertTextFieldの変更がtextFieldに反映されている
-            textField.text = alertTextField.text
+            textField = alertTextField
         }
         
         alert.addAction(action)
