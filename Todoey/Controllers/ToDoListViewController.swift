@@ -8,18 +8,44 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
-class ToDoListViewController: UITableViewController {
+class ToDoListViewController: SwipeTableViewController {
     
     var todoItems: Results<Item>?
     let realm = try! Realm()
-    
+    @IBOutlet weak var searchBar: UISearchBar!
     var selectedCategory : Category? {
         didSet{
             loadItems()
         }
     }
     
+    override func viewDidLoad() {
+        super.viewDidLoad()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        if let colorHex = selectedCategory?.colorHex {
+            title = selectedCategory!.name
+            navBarUpdate(with: colorHex)
+            
+            
+        }
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        navBarUpdate(with: "1D9BF6")
+    }
+    
+    func navBarUpdate(with colorHex:String) {
+        guard let navBar = navigationController?.navigationBar else {fatalError("Navigaiton View Controller Doesn't exist.")}
+        guard let navBarColor = UIColor(hexString: colorHex) else {fatalError()}
+        navBar.barTintColor = navBarColor
+        navBar.tintColor = ContrastColorOf(navBarColor, returnFlat: true)
+        navBar.largeTitleTextAttributes = [NSAttributedString.Key.foregroundColor: ContrastColorOf(navBarColor, returnFlat: true)]
+        searchBar.barTintColor = navBarColor
+    }
     
     //MARK:- Tableview Datasource Methods
     
@@ -31,14 +57,16 @@ class ToDoListViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
-        
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         if let item = todoItems?[indexPath.row] {
             
             cell.textLabel?.text = item.title
             
             cell.accessoryType = item.done ? .checkmark : .none
-            
+            if let color = UIColor(hexString: selectedCategory!.colorHex)?.darken(byPercentage: CGFloat(indexPath.row) / CGFloat(todoItems!.count)) {
+                cell.backgroundColor = color
+                cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+            }
         } else {
             cell.textLabel?.text = "No Items Added"
         }
@@ -69,7 +97,7 @@ class ToDoListViewController: UITableViewController {
         
         var textField = UITextField()
         
-        let alert = UIAlertController(title: "Add New ToDoy Items", message: nil, preferredStyle: .alert)
+        let alert = UIAlertController(title: "Add New ToDoey Items", message: nil, preferredStyle: .alert)
         
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
             
@@ -79,6 +107,7 @@ class ToDoListViewController: UITableViewController {
                         let newItem = Item()
                         newItem.title = textField.text!
                         newItem.dateCreated = Date()
+//                        newItem.colorHex = UIColor.randomFlat.hexValue()
                         currentCategory.items.append(newItem)
                     }
                 } catch {
@@ -100,17 +129,28 @@ class ToDoListViewController: UITableViewController {
         
     }
     
-    //MARK - Model Manupulation Methods
+    //MARK: - Model Manupulation Methods
     
     func loadItems() {
         
-        todoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
+        todoItems = selectedCategory?.items.sorted(byKeyPath: "dateCreated", ascending: false)
         
         tableView.reloadData()
     }
     
+    //MARK: - Delete From Swipe
     
-    
+    override func updateModel(at indexPath: IndexPath) {
+        if let todoItemForDeletion = todoItems?[indexPath.row] {
+            do {
+                try realm.write {
+                    realm.delete(todoItemForDeletion)
+                }
+            } catch {
+                print("Error deleting todo items")
+            }
+        }
+    }
     
 }
 
